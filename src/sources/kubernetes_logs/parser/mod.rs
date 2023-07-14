@@ -3,6 +3,8 @@ mod docker;
 mod test_util;
 
 use vector_core::config::LogNamespace;
+use vrl::owned_value_path;
+use vrl::path::PathPrefix;
 
 use crate::{
     config::log_schema,
@@ -43,11 +45,14 @@ impl FunctionTransform for Parser {
         match &mut self.state {
             ParserState::Uninitialized => {
                 let message_field = match self.log_namespace {
-                    LogNamespace::Vector => ".",
-                    LogNamespace::Legacy => log_schema().message_key(),
+                    LogNamespace::Vector => owned_value_path!("."),
+                    LogNamespace::Legacy => log_schema()
+                        .message_key()
+                        .expect("global log_schema.host_key to be valid path")
+                        .clone(),
                 };
 
-                let message = match event.as_log().get(message_field) {
+                let message = match event.as_log().get((PathPrefix::Event, &message_field)) {
                     Some(message) => message,
                     None => {
                         emit!(KubernetesLogsFormatPickerEdgeCase {

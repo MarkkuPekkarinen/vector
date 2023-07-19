@@ -811,9 +811,7 @@ impl<'de, R: JsonRead<'de>> EventIterator<'de, R> {
                     if string.is_empty() {
                         return Err(ApiError::EmptyEventField { event: self.events }.into());
                     }
-                    if let Some(message_key) = log_schema().message_key() {
-                        log.insert((PathPrefix::Event, message_key), string);
-                    }
+                    log.maybe_insert(PathPrefix::Event, log_schema().message_key(), string);
                 }
                 JsonValue::Object(mut object) => {
                     if object.is_empty() {
@@ -828,9 +826,11 @@ impl<'de, R: JsonRead<'de>> EventIterator<'de, R> {
                                 log.insert("line", line);
                             }
                             _ => {
-                                if let Some(message_key) = log_schema().message_key() {
-                                    log.insert((PathPrefix::Event, message_key), line);
-                                }
+                                log.maybe_insert(
+                                    PathPrefix::Event,
+                                    log_schema().message_key(),
+                                    line,
+                                );
                             }
                         }
                     }
@@ -1004,9 +1004,7 @@ fn raw_event(
         LogNamespace::Vector => LogEvent::from(message),
         LogNamespace::Legacy => {
             let mut log = LogEvent::default();
-            if let Some(message_key) = log_schema().message_key() {
-                log.insert((PathPrefix::Event, message_key), message);
-            }
+            log.maybe_insert(PathPrefix::Event, log_schema().message_key(), message);
             log
         }
     };
